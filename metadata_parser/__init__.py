@@ -336,7 +336,7 @@ class MetadataParser(object):
 
     og_minimum_requirements = ['title', 'type', 'image', 'url']
     twitter_sections = ['card', 'title', 'site', 'description']
-    strategy = ['og', 'dc', 'meta', 'page']
+    strategy = ['og', 'dc', 'meta', 'page', 'schema']
 
     def __init__(
         self,
@@ -395,7 +395,8 @@ class MetadataParser(object):
             'meta': {},
             'dc': {},
             'page': {},
-            'twitter': {}
+            'twitter': {},
+            'schema': {}
         }
         if strategy:
             self.strategy = strategy
@@ -545,13 +546,13 @@ class MetadataParser(object):
             doc = html
 
         # let's ensure that we have a real document...
-        if not doc or not doc.html or not doc.html.head:
+        if not doc:
             return
 
         # stash the bs4 doc for further operations
         self.soup = doc
 
-        ogs = doc.html.head.findAll(
+        ogs = doc.findAll(
             'meta',
             attrs={'property': re.compile(r'^og')}
         )
@@ -564,7 +565,7 @@ class MetadataParser(object):
                 log.debug("Ran into a serious error parsing `og`")
                 pass
 
-        twitters = doc.html.head.findAll(
+        twitters = doc.findAll(
             'meta',
             attrs={'name': re.compile(r'^twitter')}
         )
@@ -577,7 +578,7 @@ class MetadataParser(object):
 
         # pull the text off the title
         try:
-            _title_text = doc.html.head.title.text
+            _title_text = doc.find('title').text
             if len(_title_text) > self.LEN_MAX_TITLE:
                 _title_text = _title_text[:self.LEN_MAX_TITLE]
             self.metadata['page']['title'] = _title_text
@@ -618,7 +619,7 @@ class MetadataParser(object):
                 pass
 
         # pull out all the metadata
-        meta = doc.html.head.findAll(name='meta')
+        meta = doc.findAll(name='meta')
         for m in meta:
             try:
                 k = None
@@ -640,6 +641,14 @@ class MetadataParser(object):
                     else:
                         self.metadata['meta'][k] = v
             except AttributeError:
+                pass
+
+            # some of the content is not accessible from the og, but getting
+            # them from the schema.
+            try:
+                meta = doc.find(name='div', attrs={'itemprop': 'articleBody'})
+                self.metadata['schema']['description'] = meta.text.strip()
+            except:
                 pass
 
     def get_metadata(self, field, strategy=None):
