@@ -651,6 +651,13 @@ class MetadataParser(object):
             except:
                 pass
 
+            try:
+                meta = doc.find(name='article').find('img')
+                if meta:
+                    self.metadata['schema']['image'] = meta.attrs['src']
+            except:
+                pass
+
     def get_metadata(self, field, strategy=None):
         """
             looks for the field in various stores.  defaults to the core
